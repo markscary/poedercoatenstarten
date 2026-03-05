@@ -26,16 +26,16 @@
     .small { font-size: 12px; color:#666; }
     .danger { color:#b00020; font-weight: 700; }
     .btnbar { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+    #errorBox { display:none; border:1px solid #b00020; background:#fff2f2; padding:10px; border-radius:10px; margin: 12px 0; }
   </style>
 </head>
 <body>
   <h1>KUBO Traverse Planner</h1>
-  <div class="muted">
-    Bereken traverses + terugrekenen vanaf starttijd kleurspuiten (incl. buffers & cyclustijd).
-  </div>
+  <div class="muted">Bereken traverses + terugrekenen vanaf starttijd kleurspuiten (incl. buffers & cyclustijd).</div>
+
+  <div id="errorBox"></div>
 
   <div class="grid" style="margin-top:14px;">
-    <!-- INVOER: ORDER -->
     <div class="card">
       <h3 style="margin:0 0 10px;">1) Order & materiaalverdeling</h3>
 
@@ -71,14 +71,13 @@
       </table>
 
       <div class="btnbar">
-        <button id="btnAutofill">Aandeel automatisch verdelen</button>
-        <button id="btnClearMats">Materialen leegmaken</button>
+        <button type="button" id="btnAutofill">Aandeel automatisch verdelen</button>
+        <button type="button" id="btnClearMats">Materialen leegmaken</button>
       </div>
 
       <div id="orderMsg" class="small" style="margin-top:10px;"></div>
     </div>
 
-    <!-- INVOER: TIJD & BUFFERS -->
     <div class="card">
       <h3 style="margin:0 0 10px;">2) Terugrekenen (planning)</h3>
 
@@ -96,328 +95,229 @@
 
       <h4 style="margin:14px 0 8px;">Proces-tijden (minuten)</h4>
       <div class="row">
-        <div>
-          <label>Ophangen</label>
-          <input id="tHang" type="number" min="0" step="1" value="15" />
-        </div>
-        <div>
-          <label>Chemietunnel</label>
-          <input id="tChem" type="number" min="0" step="1" value="30" />
-        </div>
-        <div>
-          <label>Droogoven</label>
-          <input id="tDry" type="number" min="0" step="1" value="30" />
-        </div>
-        <div>
-          <label>Doorvoeren naar kleuroven (via primerroute)</label>
-          <input id="tToColor" type="number" min="0" step="1" value="30" />
-        </div>
+        <div><label>Ophangen</label><input id="tHang" type="number" min="0" step="1" value="15" /></div>
+        <div><label>Chemietunnel</label><input id="tChem" type="number" min="0" step="1" value="30" /></div>
+        <div><label>Droogoven</label><input id="tDry" type="number" min="0" step="1" value="30" /></div>
+        <div><label>Doorvoeren naar kleuroven (via primerroute)</label><input id="tToColor" type="number" min="0" step="1" value="30" /></div>
       </div>
 
       <h4 style="margin:14px 0 8px;">Buffers (aantal traverses die eerst nog gespoten moeten worden)</h4>
       <div class="row">
-        <div>
-          <label>Buffer bij droogoven</label>
-          <input id="bufDry" type="number" min="0" step="1" value="0" />
-        </div>
-        <div>
-          <label>Buffer bij primeroven / route</label>
-          <input id="bufPrimer" type="number" min="0" step="1" value="0" />
-        </div>
-        <div>
-          <label>Buffer vóór kleurspuitcabine</label>
-          <input id="bufSpray" type="number" min="0" step="1" value="0" />
-        </div>
+        <div><label>Buffer bij droogoven</label><input id="bufDry" type="number" min="0" step="1" value="0" /></div>
+        <div><label>Buffer bij primeroven / route</label><input id="bufPrimer" type="number" min="0" step="1" value="0" /></div>
+        <div><label>Buffer vóór kleurspuitcabine</label><input id="bufSpray" type="number" min="0" step="1" value="0" /></div>
       </div>
 
       <div class="btnbar">
-        <button id="btnCalc">Bereken planning</button>
-        <button id="btnNowMidnight">Zet start op komende middernacht</button>
+        <button type="button" id="btnCalc">Bereken planning</button>
+        <button type="button" id="btnNowMidnight">Zet start op komende middernacht</button>
       </div>
 
       <div id="planMsg" class="small" style="margin-top:10px;"></div>
     </div>
   </div>
 
-  <!-- OUTPUT -->
   <div class="card" style="margin-top:14px;">
     <h3 style="margin:0 0 10px;">3) Resultaat: traverses & tijdschema</h3>
 
     <div class="row">
-      <div>
-        <div class="small">Totaal traverses (KUBO)</div>
-        <div class="mono" style="font-size:22px; font-weight:800;" id="outTotalTrav">—</div>
-      </div>
-      <div>
-        <div class="small">Spuitduur KUBO (min)</div>
-        <div class="mono" style="font-size:22px; font-weight:800;" id="outSprayDur">—</div>
-      </div>
-      <div>
-        <div class="small">Buffers totaal (traverses)</div>
-        <div class="mono" style="font-size:22px; font-weight:800;" id="outBufTotal">—</div>
-      </div>
-      <div>
-        <div class="small">Buffer spuitduur (min)</div>
-        <div class="mono" style="font-size:22px; font-weight:800;" id="outBufDur">—</div>
-      </div>
+      <div><div class="small">Totaal traverses (KUBO)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outTotalTrav">—</div></div>
+      <div><div class="small">Spuitduur KUBO (min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outSprayDur">—</div></div>
+      <div><div class="small">Buffers totaal (traverses)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outBufTotal">—</div></div>
+      <div><div class="small">Buffer spuitduur (min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outBufDur">—</div></div>
     </div>
 
     <table>
-      <thead>
-        <tr>
-          <th>Stap</th>
-          <th>Moment</th>
-          <th>Toelichting</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Stap</th><th>Moment</th><th>Toelichting</th></tr></thead>
       <tbody id="timeline"></tbody>
     </table>
-
-    <div class="small" style="margin-top:10px;">
-      Interpretatie: buffers worden vóór KUBO gespoten met <b>minimale cyclustijd</b>. Om KUBO exact om de gekozen starttijd te kunnen spuiten,
-      moet je dus eerder starten met spuiten (buffers wegwerken) én vaak ook eerder starten met ophangen zodat KUBO niet “te laat” achter buffers aankomt.
-    </div>
   </div>
 
 <script>
-/* -------------------------
-   Helpers
---------------------------*/
-function round(n, d=1) { const p = Math.pow(10,d); return Math.round(n*p)/p; }
-function ceilDiv(a,b){ if(b<=0) return 0; return Math.ceil(a/b); }
-function minutesToMs(min){ return min * 60 * 1000; }
-
-function fmtDT(dt){
-  if(!dt) return "—";
-  const pad = n => String(n).padStart(2,"0");
-  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-}
-
-function getNum(id){
-  const v = document.getElementById(id).value;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function setMsg(el, html, kind=""){
-  el.innerHTML = kind ? `<span class="${kind}">${html}</span>` : html;
-}
-
-/* -------------------------
-   Material rows
---------------------------*/
-const matTbody = document.getElementById("matRows");
-const MAT_COUNT = 4;
-
-function buildMatRows(){
-  matTbody.innerHTML = "";
-  for(let i=1;i<=MAT_COUNT;i++){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input id="matName${i}" type="text" placeholder="Materiaal ${i}" value="${i===1?'Profiel A':''}" /></td>
-      <td><input id="matM2${i}" type="number" min="0" step="0.1" value="${i===1? '1000' : ''}" /></td>
-      <td><input id="matPerTrav${i}" type="number" min="0" step="0.1" value="${i===1? '25' : ''}" /></td>
-      <td class="mono" id="matTravOut${i}">—</td>
-    `;
-    matTbody.appendChild(tr);
+(function(){
+  const errorBox = document.getElementById("errorBox");
+  function showError(msg){
+    errorBox.style.display = "block";
+    errorBox.innerHTML = `<b class="danger">JavaScript fout:</b> <span class="mono">${String(msg).replaceAll("<","&lt;")}</span>
+      <div class="small">Tip: open deze HTML in een normale browser (Chrome/Edge) buiten SharePoint/Teams-embedded viewers, of host als losse pagina.</div>`;
   }
-}
-buildMatRows();
+  window.addEventListener("error", (e) => showError(e.message || e.error || "Onbekende fout"));
 
-/* -------------------------
-   Default start datetime-local = today 00:00
---------------------------*/
-function setStartToNextMidnight(){
-  const now = new Date();
-  const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 0, 0);
-  const pad = n => String(n).padStart(2,"0");
-  const v = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-  document.getElementById("sprayStart").value = v;
-}
-setStartToNextMidnight();
+  function round(n, d=1) { const p = Math.pow(10,d); return Math.round(n*p)/p; }
+  function ceilDiv(a,b){ if(b<=0) return 0; return Math.ceil(a/b); }
+  function minutesToMs(min){ return min * 60 * 1000; }
+  function fmtDT(dt){
+    if(!dt) return "—";
+    const pad = n => String(n).padStart(2,"0");
+    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+  function getNum(id){
+    const el = document.getElementById(id);
+    if(!el) throw new Error(`Element ontbreekt: ${id}`);
+    const n = Number(el.value);
+    return Number.isFinite(n) ? n : 0;
+  }
+  function setMsg(el, html, kind=""){
+    el.innerHTML = kind ? `<span class="${kind}">${html}</span>` : html;
+  }
 
-document.getElementById("btnNowMidnight").addEventListener("click", () => {
+  // Build material rows
+  const matTbody = document.getElementById("matRows");
+  const MAT_COUNT = 4;
+
+  function buildMatRows(){
+    matTbody.innerHTML = "";
+    for(let i=1;i<=MAT_COUNT;i++){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input id="matName${i}" type="text" placeholder="Materiaal ${i}" value="${i===1?'Profiel A':''}" /></td>
+        <td><input id="matM2${i}" type="number" min="0" step="0.1" value="${i===1? '1000' : ''}" /></td>
+        <td><input id="matPerTrav${i}" type="number" min="0" step="0.1" value="${i===1? '25' : ''}" /></td>
+        <td class="mono" id="matTravOut${i}">—</td>
+      `;
+      matTbody.appendChild(tr);
+    }
+  }
+  buildMatRows();
+
+  function setStartToNextMidnight(){
+    const now = new Date();
+    const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 0, 0);
+    const pad = n => String(n).padStart(2,"0");
+    document.getElementById("sprayStart").value =
+      `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
   setStartToNextMidnight();
-});
 
-/* -------------------------
-   Compute order traverses
---------------------------*/
-function computeOrder(){
-  const totalM2 = getNum("totalM2");
-  let sumM2 = 0;
-  let sumTrav = 0;
+  function computeOrder(){
+    const totalM2 = getNum("totalM2");
+    let sumM2 = 0, sumTrav = 0;
 
-  for(let i=1;i<=MAT_COUNT;i++){
-    const m2 = getNum(`matM2${i}`);
-    const per = getNum(`matPerTrav${i}`);
-    sumM2 += m2;
+    for(let i=1;i<=MAT_COUNT;i++){
+      const m2 = getNum(`matM2${i}`);
+      const per = getNum(`matPerTrav${i}`);
+      sumM2 += m2;
+      const trav = (m2>0 && per>0) ? ceilDiv(m2, per) : 0;
+      sumTrav += trav;
+      document.getElementById(`matTravOut${i}`).textContent = trav ? String(trav) : "—";
+    }
 
-    const trav = (m2>0 && per>0) ? ceilDiv(m2, per) : 0;
-    sumTrav += trav;
-    document.getElementById(`matTravOut${i}`).textContent = trav ? String(trav) : "—";
+    document.getElementById("sumM2Cell").textContent = `${round(sumM2,1)} m²`;
+    document.getElementById("sumTravCell").textContent = `${sumTrav}`;
+
+    const msg = document.getElementById("orderMsg");
+    if(sumM2 === 0){
+      setMsg(msg, "Vul minimaal 1 materiaalregel in (aandeel m² + m²/traverse).", "danger");
+    } else if (Math.abs(sumM2 - totalM2) > 0.01){
+      setMsg(msg, `Let op: som materiaal-aandelen is ${round(sumM2,1)} m², maar totaal order is ${round(totalM2,1)} m².`, "danger");
+    } else {
+      setMsg(msg, `<span class="pill ok">OK</span> Som materiaal-aandelen komt overeen met totaal order.`);
+    }
+    return { sumTrav };
   }
 
-  document.getElementById("sumM2Cell").textContent = `${round(sumM2,1)} m²`;
-  document.getElementById("sumTravCell").textContent = `${sumTrav}`;
-
-  const msg = document.getElementById("orderMsg");
-  if(sumM2 === 0){
-    setMsg(msg, "Vul minimaal 1 materiaalregel in (aandeel m² + m²/traverse).", "danger");
-  } else if (Math.abs(sumM2 - totalM2) > 0.01){
-    setMsg(msg, `Let op: som materiaal-aandelen is ${round(sumM2,1)} m², maar totaal order is ${round(totalM2,1)} m². (Je kunt dit bewust doen, maar meestal wil je dit gelijk.)`, "danger");
-  } else {
-    setMsg(msg, `<span class="pill ok">OK</span> Som materiaal-aandelen komt overeen met totaal order.`);
+  function parseDTLocal(id){
+    const v = document.getElementById(id).value;
+    if(!v) return null;
+    const dt = new Date(v);
+    return isNaN(dt.getTime()) ? null : dt;
   }
 
-  return { totalM2, sumM2, sumTrav };
-}
-
-document.getElementById("btnAutofill").addEventListener("click", () => {
-  // Verdeel totaal m² gelijk over ingevulde materialen (op basis van m²/traverse ingevuld)
-  const totalM2 = getNum("totalM2");
-  const active = [];
-  for(let i=1;i<=MAT_COUNT;i++){
-    const per = getNum(`matPerTrav${i}`);
-    const name = document.getElementById(`matName${i}`).value.trim();
-    if(per>0 || name) active.push(i);
+  function addTimelineRow(step, dt, note){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><b>${step}</b></td><td class="mono">${fmtDT(dt)}</td><td>${note}</td>`;
+    return tr;
   }
-  const n = active.length || 1;
-  const each = totalM2 / n;
-  active.forEach(i => document.getElementById(`matM2${i}`).value = round(each,1));
+
+  function calcPlan(){
+    const { sumTrav } = computeOrder();
+    const sprayStart = parseDTLocal("sprayStart");
+    const cycleMin = getNum("cycleMin");
+
+    const tHang = getNum("tHang");
+    const tChem = getNum("tChem");
+    const tDry  = getNum("tDry");
+    const tToColor = getNum("tToColor");
+
+    const bufTotal = getNum("bufDry") + getNum("bufPrimer") + getNum("bufSpray");
+    const bufDurMin = bufTotal * cycleMin;
+
+    const leadMin = tHang + tChem + tDry + tToColor;
+
+    const msg = document.getElementById("planMsg");
+    if(!sprayStart){ setMsg(msg, "Vul een geldige starttijd kleurspuiten in.", "danger"); return; }
+    if(cycleMin <= 0){ setMsg(msg, "Cyclustijd moet > 0 zijn.", "danger"); return; }
+    if(sumTrav <= 0){ setMsg(msg, "Er zijn 0 traverses berekend.", "danger"); return; }
+
+    const startSprayBuffers = new Date(sprayStart.getTime() - minutesToMs(bufDurMin));
+    const startHangKuboFirst = new Date(sprayStart.getTime() - minutesToMs(leadMin + bufDurMin));
+    const startChem = new Date(startHangKuboFirst.getTime() + minutesToMs(tHang));
+    const startDry = new Date(startChem.getTime() + minutesToMs(tChem));
+    const startToColor = new Date(startDry.getTime() + minutesToMs(tDry));
+
+    const kuboSprayDurMin = sumTrav * cycleMin;
+    const endSprayKubo = new Date(sprayStart.getTime() + minutesToMs(kuboSprayDurMin));
+
+    document.getElementById("outTotalTrav").textContent = String(sumTrav);
+    document.getElementById("outSprayDur").textContent  = String(round(kuboSprayDurMin,1));
+    document.getElementById("outBufTotal").textContent  = String(bufTotal);
+    document.getElementById("outBufDur").textContent    = String(round(bufDurMin,1));
+
+    const tl = document.getElementById("timeline");
+    tl.innerHTML = "";
+    tl.appendChild(addTimelineRow("Start spuiten buffers", startSprayBuffers, `${bufTotal} traverses buffers eerst wegspuiten (≈ ${round(bufDurMin,1)} min).`));
+    tl.appendChild(addTimelineRow("Start ophangen KUBO (1e)", startHangKuboFirst, `Lead ${leadMin} min + buffers ${round(bufDurMin,1)} min.`));
+    tl.appendChild(addTimelineRow("Start chemietunnel (1e)", startChem, `Na ophangen (${tHang} min).`));
+    tl.appendChild(addTimelineRow("Start droogoven (1e)", startDry, `Na chemie (${tChem} min).`));
+    tl.appendChild(addTimelineRow("Doorvoeren naar kleuroven (1e)", startToColor, `Na droogoven (${tDry} min).`));
+    tl.appendChild(addTimelineRow("Start kleurspuiten KUBO (1e)", sprayStart, `Cyclustijd ${cycleMin} min/traverse.`));
+    tl.appendChild(addTimelineRow("Einde kleurspuiten KUBO (laatste)", endSprayKubo, `${sumTrav} traverses → ≈ ${round(kuboSprayDurMin,1)} min.`));
+
+    setMsg(msg, `<span class="pill ok">Planning berekend</span>`);
+  }
+
+  // Buttons
+  document.getElementById("btnNowMidnight").addEventListener("click", setStartToNextMidnight);
+
+  document.getElementById("btnAutofill").addEventListener("click", () => {
+    const totalM2 = getNum("totalM2");
+    const active = [];
+    for(let i=1;i<=MAT_COUNT;i++){
+      const per = getNum(`matPerTrav${i}`);
+      const name = document.getElementById(`matName${i}`).value.trim();
+      if(per>0 || name) active.push(i);
+    }
+    const n = active.length || 1;
+    const each = totalM2 / n;
+    active.forEach(i => document.getElementById(`matM2${i}`).value = round(each,1));
+    computeOrder();
+  });
+
+  document.getElementById("btnClearMats").addEventListener("click", () => {
+    for(let i=1;i<=MAT_COUNT;i++){
+      document.getElementById(`matName${i}`).value = "";
+      document.getElementById(`matM2${i}`).value = "";
+      document.getElementById(`matPerTrav${i}`).value = "";
+      document.getElementById(`matTravOut${i}`).textContent = "—";
+    }
+    document.getElementById("matName1").value = "Profiel A";
+    document.getElementById("matM21").value = String(getNum("totalM2"));
+    document.getElementById("matPerTrav1").value = "25";
+    computeOrder();
+  });
+
+  document.getElementById("btnCalc").addEventListener("click", calcPlan);
+
+  // Auto recompute
+  document.addEventListener("input", (e) => {
+    const id = e.target && e.target.id ? e.target.id : "";
+    if(id.startsWith("mat") || id === "totalM2") computeOrder();
+  });
+
+  // Initial
   computeOrder();
-});
-
-document.getElementById("btnClearMats").addEventListener("click", () => {
-  for(let i=1;i<=MAT_COUNT;i++){
-    document.getElementById(`matName${i}`).value = "";
-    document.getElementById(`matM2${i}`).value = "";
-    document.getElementById(`matPerTrav${i}`).value = "";
-    document.getElementById(`matTravOut${i}`).textContent = "—";
-  }
-  document.getElementById("matName1").value = "Profiel A";
-  document.getElementById("matM21").value = getNum("totalM2");
-  document.getElementById("matPerTrav1").value = 25;
-  computeOrder();
-});
-
-/* -------------------------
-   Planning / back-calc
---------------------------*/
-function parseDTLocal(id){
-  const v = document.getElementById(id).value;
-  if(!v) return null;
-  // datetime-local -> local time
-  const dt = new Date(v);
-  return isNaN(dt.getTime()) ? null : dt;
-}
-
-function addTimelineRow(step, dt, note){
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><b>${step}</b></td>
-    <td class="mono">${fmtDT(dt)}</td>
-    <td>${note}</td>
-  `;
-  return tr;
-}
-
-function calcPlan(){
-  const { sumTrav } = computeOrder();
-
-  const sprayStart = parseDTLocal("sprayStart");
-  const cycleMin = getNum("cycleMin");
-
-  const tHang = getNum("tHang");
-  const tChem = getNum("tChem");
-  const tDry  = getNum("tDry");
-  const tToColor = getNum("tToColor");
-
-  const bufDry = getNum("bufDry");
-  const bufPrimer = getNum("bufPrimer");
-  const bufSpray = getNum("bufSpray");
-
-  const bufTotal = Math.max(0, bufDry + bufPrimer + bufSpray);
-  const bufDurMin = bufTotal * cycleMin;
-
-  const processLeadMin = tHang + tChem + tDry + tToColor; // tot aan start spuiten
-
-  const msg = document.getElementById("planMsg");
-  if(!sprayStart){
-    setMsg(msg, "Vul een geldige starttijd kleurspuiten in.", "danger");
-    return;
-  }
-  if(cycleMin <= 0){
-    setMsg(msg, "Cyclustijd moet > 0 zijn.", "danger");
-    return;
-  }
-  if(sumTrav <= 0){
-    setMsg(msg, "Er zijn 0 traverses berekend. Vul materiaal-aandelen + m²/traverse in.", "danger");
-    return;
-  }
-
-  // KUBO spuiten start = sprayStart
-  // Om KUBO exact dan te kunnen starten, moet bufferwerk vooraf klaar zijn:
-  const startSprayBuffers = new Date(sprayStart.getTime() - minutesToMs(bufDurMin));
-
-  // Als KUBO traverse achter buffers komt te hangen in de flow, moet eerste KUBO traverse eerder de lijn in:
-  // We nemen conservatief aan: KUBO moet processLeadMin + bufferSprayTime eerder starten met ophangen.
-  const startHangKuboFirst = new Date(sprayStart.getTime() - minutesToMs(processLeadMin + bufDurMin));
-
-  // Aanvang chemie/droog/doorvoeren voor eerste KUBO traverse (indicatief)
-  const startChemKuboFirst = new Date(startHangKuboFirst.getTime() + minutesToMs(tHang));
-  const startDryKuboFirst  = new Date(startChemKuboFirst.getTime() + minutesToMs(tChem));
-  const startToColorKuboFirst = new Date(startDryKuboFirst.getTime() + minutesToMs(tDry));
-
-  // KUBO spuitduur
-  const kuboSprayDurMin = sumTrav * cycleMin;
-  const endSprayKubo = new Date(sprayStart.getTime() + minutesToMs(kuboSprayDurMin));
-
-  // Laatste KUBO traverse ophangen start (als je continu ophangt op cycle tempo)
-  // (Simpel model: elke traverse start ophangen zodanig dat hij op tijd in de lijn komt; ritme = cycleMin)
-  const startHangKuboLast = new Date(startHangKuboFirst.getTime() + minutesToMs((sumTrav - 1) * cycleMin));
-
-  // Outputs
-  document.getElementById("outTotalTrav").textContent = String(sumTrav);
-  document.getElementById("outSprayDur").textContent  = String(round(kuboSprayDurMin,1));
-  document.getElementById("outBufTotal").textContent  = String(bufTotal);
-  document.getElementById("outBufDur").textContent    = String(round(bufDurMin,1));
-
-  // Timeline table
-  const tl = document.getElementById("timeline");
-  tl.innerHTML = "";
-
-  tl.appendChild(addTimelineRow(
-    "Start spuiten buffers",
-    startSprayBuffers,
-    `Om KUBO om ${fmtDT(sprayStart)} te kunnen starten, moeten ${bufTotal} buffer-traverses eerst gespoten zijn. (≈ ${round(bufDurMin,1)} min @ ${cycleMin} min/traverse)`
-  ));
-
-  tl.appendChild(addTimelineRow(
-    "Start ophangen KUBO (1e traverse)",
-    startHangKuboFirst,
-    `Terugrekening: ${processLeadMin} min proceslead + ${round(bufDurMin,1)} min buffers.`
-  ));
-
-  tl.appendChild(addTimelineRow(
-    "Start chemietunnel KUBO (1e)",
-    startChemKuboFirst,
-    `Na ophangen (${tHang} min).`
-  ));
-
-  tl.appendChild(addTimelineRow(
-    "Start droogoven KUBO (1e)",
-    startDryKuboFirst,
-    `Na chemie (${tChem} min).`
-  ));
-
-  tl.appendChild(addTimelineRow(
-    "Doorvoeren naar kleuroven KUBO (1e)",
-    startToColorKuboFirst,
-    `Na droogoven (${tDry} min).`
-  ));
-
-  tl.appendChild(addTimelineRow(
-    "Start kleurspuiten KUBO (1e)",
-    sprayStart,
-    `KUBO start sp
+  calcPlan();
+})();
+</script>
+</body>
+</html>
