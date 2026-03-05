@@ -31,11 +31,12 @@
 </head>
 <body>
   <h1>KUBO Traverse Planner</h1>
-  <div class="muted">Bereken traverses + terugrekenen vanaf starttijd kleurspuiten (incl. buffers & cyclustijd).</div>
+  <div class="muted">Bereken traverses + terugrekenen vanaf starttijd kleurspuiten (incl. buffers, cyclustijd en pauzes).</div>
 
   <div id="errorBox"></div>
 
   <div class="grid" style="margin-top:14px;">
+    <!-- ORDER -->
     <div class="card">
       <h3 style="margin:0 0 10px;">1) Order & materiaalverdeling</h3>
 
@@ -47,7 +48,7 @@
       </div>
 
       <div class="small" style="margin-top:8px;">
-        Vul per materiaal in: <b>m² aandeel</b> + <b>m² per traverse</b>. Tot 4 materiaalsoorten.
+        Vul per materiaal in: <b>m² aandeel</b> + <b>m² / traverse</b>. Tot 4 materiaalsoorten.
       </div>
 
       <table>
@@ -78,6 +79,7 @@
       <div id="orderMsg" class="small" style="margin-top:10px;"></div>
     </div>
 
+    <!-- PLANNING -->
     <div class="card">
       <h3 style="margin:0 0 10px;">2) Terugrekenen (planning)</h3>
 
@@ -101,12 +103,44 @@
         <div><label>Doorvoeren naar kleuroven (via primerroute)</label><input id="tToColor" type="number" min="0" step="1" value="30" /></div>
       </div>
 
-      <h4 style="margin:14px 0 8px;">Buffers (aantal traverses die eerst nog gespoten moeten worden)</h4>
+      <h4 style="margin:14px 0 8px;">Buffers (traverses die vóór KUBO nog “voorlopen”)</h4>
       <div class="row">
+        <div><label>Buffer na ophangen (voor chemietunnel)</label><input id="bufAfterHang" type="number" min="0" step="1" value="0" /></div>
         <div><label>Buffer bij droogoven</label><input id="bufDry" type="number" min="0" step="1" value="0" /></div>
         <div><label>Buffer bij primeroven / route</label><input id="bufPrimer" type="number" min="0" step="1" value="0" /></div>
         <div><label>Buffer vóór kleurspuitcabine</label><input id="bufSpray" type="number" min="0" step="1" value="0" /></div>
       </div>
+
+      <h4 style="margin:14px 0 8px;">Pauzes (spuitcabine downtime)</h4>
+      <div class="row">
+        <div>
+          <label>Pauzeduur (min) — zet op 0 als je doorspuit</label>
+          <input id="breakDur" type="number" min="0" step="1" value="15" />
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Shift</th><th>Pauze 1 (HH:MM)</th><th>Pauze 2 (HH:MM)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Dag</b></td>
+            <td><input id="bDay1" type="time" value="09:30"></td>
+            <td><input id="bDay2" type="time" value="12:30"></td>
+          </tr>
+          <tr>
+            <td><b>Avond</b></td>
+            <td><input id="bEve1" type="time" value="18:30"></td>
+            <td><input id="bEve2" type="time" value="21:00"></td>
+          </tr>
+          <tr>
+            <td><b>Nacht</b></td>
+            <td><input id="bNig1" type="time" value="01:30"></td>
+            <td><input id="bNig2" type="time" value="04:00"></td>
+          </tr>
+        </tbody>
+      </table>
 
       <div class="btnbar">
         <button type="button" id="btnCalc">Bereken planning</button>
@@ -117,20 +151,25 @@
     </div>
   </div>
 
+  <!-- OUTPUT -->
   <div class="card" style="margin-top:14px;">
     <h3 style="margin:0 0 10px;">3) Resultaat: traverses & tijdschema</h3>
 
     <div class="row">
       <div><div class="small">Totaal traverses (KUBO)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outTotalTrav">—</div></div>
-      <div><div class="small">Spuitduur KUBO (min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outSprayDur">—</div></div>
+      <div><div class="small">Spuitduur KUBO (werk-min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outSprayDur">—</div></div>
       <div><div class="small">Buffers totaal (traverses)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outBufTotal">—</div></div>
-      <div><div class="small">Buffer spuitduur (min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outBufDur">—</div></div>
+      <div><div class="small">Buffer spuitduur (werk-min)</div><div class="mono" style="font-size:22px; font-weight:800;" id="outBufDur">—</div></div>
     </div>
 
     <table>
       <thead><tr><th>Stap</th><th>Moment</th><th>Toelichting</th></tr></thead>
       <tbody id="timeline"></tbody>
     </table>
+
+    <div class="small" style="margin-top:10px;">
+      Pauzes worden verrekend als downtime van de <b>spuitcabine</b> (bottleneck). Lead times van chemie/droog/doorvoer/ophangen blijven “kloktijd”.
+    </div>
   </div>
 
 <script>
@@ -138,8 +177,7 @@
   const errorBox = document.getElementById("errorBox");
   function showError(msg){
     errorBox.style.display = "block";
-    errorBox.innerHTML = `<b class="danger">JavaScript fout:</b> <span class="mono">${String(msg).replaceAll("<","&lt;")}</span>
-      <div class="small">Tip: open deze HTML in een normale browser (Chrome/Edge) buiten SharePoint/Teams-embedded viewers, of host als losse pagina.</div>`;
+    errorBox.innerHTML = `<b class="danger">JavaScript fout:</b> <span class="mono">${String(msg).replaceAll("<","&lt;")}</span>`;
   }
   window.addEventListener("error", (e) => showError(e.message || e.error || "Onbekende fout"));
 
@@ -157,11 +195,18 @@
     const n = Number(el.value);
     return Number.isFinite(n) ? n : 0;
   }
+  function getStr(id){
+    const el = document.getElementById(id);
+    if(!el) throw new Error(`Element ontbreekt: ${id}`);
+    return (el.value || "").trim();
+  }
   function setMsg(el, html, kind=""){
     el.innerHTML = kind ? `<span class="${kind}">${html}</span>` : html;
   }
 
-  // Build material rows
+  /* -------------------------
+     Material rows
+  --------------------------*/
   const matTbody = document.getElementById("matRows");
   const MAT_COUNT = 4;
 
@@ -223,14 +268,105 @@
     return isNaN(dt.getTime()) ? null : dt;
   }
 
+  /* -------------------------
+     Breaks handling (spuitcabine downtime)
+  --------------------------*/
+  function parseHHMM(s){
+    if(!s || !/^\d{2}:\d{2}$/.test(s)) return null;
+    const [hh, mm] = s.split(":").map(Number);
+    if(hh<0||hh>23||mm<0||mm>59) return null;
+    return { hh, mm };
+  }
+
+  function dateAtTime(baseDate, hh, mm){
+    return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hh, mm, 0, 0);
+  }
+
+  function eachDateBetween(start, end){
+    const out = [];
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0,0,0,0);
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 0,0,0,0);
+    while(d.getTime() <= last.getTime()){
+      out.push(new Date(d.getTime()));
+      d.setDate(d.getDate()+1);
+    }
+    return out;
+  }
+
+  function buildBreakIntervals(start, end){
+    const dur = getNum("breakDur");
+    if(dur <= 0) return []; // doorspuiten
+
+    const times = [
+      parseHHMM(getStr("bDay1")),
+      parseHHMM(getStr("bDay2")),
+      parseHHMM(getStr("bEve1")),
+      parseHHMM(getStr("bEve2")),
+      parseHHMM(getStr("bNig1")),
+      parseHHMM(getStr("bNig2")),
+    ].filter(Boolean);
+
+    if(times.length === 0) return [];
+
+    const days = eachDateBetween(start, end);
+    const intervals = [];
+    for(const day of days){
+      for(const t of times){
+        const bStart = dateAtTime(day, t.hh, t.mm);
+        const bEnd = new Date(bStart.getTime() + minutesToMs(dur));
+        // Only keep if could overlap range
+        if(bEnd.getTime() > start.getTime() && bStart.getTime() < end.getTime()){
+          intervals.push({ start: bStart, end: bEnd });
+        }
+      }
+    }
+    // sort
+    intervals.sort((a,b)=>a.start-b.start);
+    return intervals;
+  }
+
+  function isInAnyBreak(dt, breaks){
+    const ms = dt.getTime();
+    for(const b of breaks){
+      if(ms >= b.start.getTime() && ms < b.end.getTime()) return true;
+    }
+    return false;
+  }
+
+  // Back-calc: find a start time such that there are exactly workMinutes of "working time" until endTime
+  // (Working time excludes breaks; minute-resolution is ok for planning.)
+  function subtractWorkingMinutes(endTime, workMinutes, breaks){
+    let remaining = Math.max(0, Math.ceil(workMinutes));
+    let t = new Date(endTime.getTime());
+    while(remaining > 0){
+      t = new Date(t.getTime() - minutesToMs(1));
+      if(!isInAnyBreak(t, breaks)) remaining--;
+    }
+    return t;
+  }
+
+  function addWorkingMinutes(startTime, workMinutes, breaks){
+    let remaining = Math.max(0, Math.ceil(workMinutes));
+    let t = new Date(startTime.getTime());
+    while(remaining > 0){
+      t = new Date(t.getTime() + minutesToMs(1));
+      if(!isInAnyBreak(t, breaks)) remaining--;
+    }
+    return t;
+  }
+
   function addTimelineRow(step, dt, note){
     const tr = document.createElement("tr");
     tr.innerHTML = `<td><b>${step}</b></td><td class="mono">${fmtDT(dt)}</td><td>${note}</td>`;
     return tr;
   }
 
+  /* -------------------------
+     Planning / back-calc
+  --------------------------*/
   function calcPlan(){
     const { sumTrav } = computeOrder();
+
     const sprayStart = parseDTLocal("sprayStart");
     const cycleMin = getNum("cycleMin");
 
@@ -239,44 +375,88 @@
     const tDry  = getNum("tDry");
     const tToColor = getNum("tToColor");
 
-    const bufTotal = getNum("bufDry") + getNum("bufPrimer") + getNum("bufSpray");
-    const bufDurMin = bufTotal * cycleMin;
+    // Buffers: inclusief nieuwe buffer na ophangen
+    const bufAfterHang = getNum("bufAfterHang");
+    const bufDry = getNum("bufDry");
+    const bufPrimer = getNum("bufPrimer");
+    const bufSpray = getNum("bufSpray");
 
-    const leadMin = tHang + tChem + tDry + tToColor;
+    const bufTotal = Math.max(0, bufAfterHang + bufDry + bufPrimer + bufSpray);
+    const bufWorkMin = bufTotal * cycleMin; // werk-minuten spuitcabine
+
+    const leadClockMin = tHang + tChem + tDry + tToColor; // kloktijd tot aan spuiten
 
     const msg = document.getElementById("planMsg");
     if(!sprayStart){ setMsg(msg, "Vul een geldige starttijd kleurspuiten in.", "danger"); return; }
     if(cycleMin <= 0){ setMsg(msg, "Cyclustijd moet > 0 zijn.", "danger"); return; }
     if(sumTrav <= 0){ setMsg(msg, "Er zijn 0 traverses berekend.", "danger"); return; }
 
-    const startSprayBuffers = new Date(sprayStart.getTime() - minutesToMs(bufDurMin));
-    const startHangKuboFirst = new Date(sprayStart.getTime() - minutesToMs(leadMin + bufDurMin));
+    // Breaks: we need a window that covers buffer spraying (before sprayStart) and kubo spraying (after sprayStart).
+    // We'll compute an initial rough span, then build breaks for that span.
+    const roughStart = new Date(sprayStart.getTime() - minutesToMs(leadClockMin + bufWorkMin + 600)); // extra marge 10u
+    const roughEnd   = new Date(sprayStart.getTime() + minutesToMs(sumTrav * cycleMin + 600));
+    const breaks = buildBreakIntervals(roughStart, roughEnd);
+
+    // Start spuiten buffers: terugrekenen met pauzes (werk-minuten)
+    const startSprayBuffers = subtractWorkingMinutes(sprayStart, bufWorkMin, breaks);
+
+    // Start ophangen KUBO 1e: kloktijd lead + buffer-werk (want KUBO moet achter buffers niet te laat aankomen)
+    // We nemen conservatief: buffers moeten eerst verwerkt zijn door spuitcabine, dus KUBO moet lead + buffer-werk eerder starten.
+    const startHangKuboFirst = new Date(
+      subtractWorkingMinutes(sprayStart, bufWorkMin, breaks).getTime() - minutesToMs(leadClockMin)
+    );
+
     const startChem = new Date(startHangKuboFirst.getTime() + minutesToMs(tHang));
-    const startDry = new Date(startChem.getTime() + minutesToMs(tChem));
+    const startDry  = new Date(startChem.getTime() + minutesToMs(tChem));
     const startToColor = new Date(startDry.getTime() + minutesToMs(tDry));
 
-    const kuboSprayDurMin = sumTrav * cycleMin;
-    const endSprayKubo = new Date(sprayStart.getTime() + minutesToMs(kuboSprayDurMin));
+    // KUBO spuitduur (werk-minuten) + pauzes → eindtijd
+    const kuboWorkMin = sumTrav * cycleMin;
+    const endSprayKubo = addWorkingMinutes(sprayStart, kuboWorkMin, breaks);
 
+    // Outputs
     document.getElementById("outTotalTrav").textContent = String(sumTrav);
-    document.getElementById("outSprayDur").textContent  = String(round(kuboSprayDurMin,1));
+    document.getElementById("outSprayDur").textContent  = String(round(kuboWorkMin,1));
     document.getElementById("outBufTotal").textContent  = String(bufTotal);
-    document.getElementById("outBufDur").textContent    = String(round(bufDurMin,1));
+    document.getElementById("outBufDur").textContent    = String(round(bufWorkMin,1));
 
     const tl = document.getElementById("timeline");
     tl.innerHTML = "";
-    tl.appendChild(addTimelineRow("Start spuiten buffers", startSprayBuffers, `${bufTotal} traverses buffers eerst wegspuiten (≈ ${round(bufDurMin,1)} min).`));
-    tl.appendChild(addTimelineRow("Start ophangen KUBO (1e)", startHangKuboFirst, `Lead ${leadMin} min + buffers ${round(bufDurMin,1)} min.`));
-    tl.appendChild(addTimelineRow("Start chemietunnel (1e)", startChem, `Na ophangen (${tHang} min).`));
-    tl.appendChild(addTimelineRow("Start droogoven (1e)", startDry, `Na chemie (${tChem} min).`));
-    tl.appendChild(addTimelineRow("Doorvoeren naar kleuroven (1e)", startToColor, `Na droogoven (${tDry} min).`));
-    tl.appendChild(addTimelineRow("Start kleurspuiten KUBO (1e)", sprayStart, `Cyclustijd ${cycleMin} min/traverse.`));
-    tl.appendChild(addTimelineRow("Einde kleurspuiten KUBO (laatste)", endSprayKubo, `${sumTrav} traverses → ≈ ${round(kuboSprayDurMin,1)} min.`));
 
-    setMsg(msg, `<span class="pill ok">Planning berekend</span>`);
+    tl.appendChild(addTimelineRow(
+      "Start spuiten buffers",
+      startSprayBuffers,
+      `${bufTotal} traverses buffers eerst wegspuiten (≈ ${round(bufWorkMin,1)} werk-min @ ${cycleMin} min/traverse) + pauzes (${getNum("breakDur")} min).`
+    ));
+
+    tl.appendChild(addTimelineRow(
+      "Start ophangen KUBO (1e traverse)",
+      startHangKuboFirst,
+      `Terugrekening: ${leadClockMin} min kloktijd (ophangen+chemie+droog+doorvoer) + buffer-werk (incl. pauzes) vóór spuitstart.`
+    ));
+
+    tl.appendChild(addTimelineRow("Start chemietunnel KUBO (1e)", startChem, `Na ophangen (${tHang} min).`));
+    tl.appendChild(addTimelineRow("Start droogoven KUBO (1e)", startDry, `Na chemie (${tChem} min).`));
+    tl.appendChild(addTimelineRow("Doorvoeren naar kleuroven KUBO (1e)", startToColor, `Na droogoven (${tDry} min).`));
+
+    tl.appendChild(addTimelineRow(
+      "Start kleurspuiten KUBO (1e)",
+      sprayStart,
+      `KUBO start spuiten. Cyclustijd ${cycleMin} min/traverse. Pauzes worden automatisch ingevoegd.`
+    ));
+
+    tl.appendChild(addTimelineRow(
+      "Einde kleurspuiten KUBO (laatste)",
+      endSprayKubo,
+      `${sumTrav} traverses → ≈ ${round(kuboWorkMin,1)} werk-min + pauzes in het tijdvenster.`
+    ));
+
+    setMsg(msg, `<span class="pill ok">Planning berekend</span> Buffers: ${bufTotal} • Pauzeduur: ${getNum("breakDur")} min.`);
   }
 
-  // Buttons
+  /* -------------------------
+     Buttons & events
+  --------------------------*/
   document.getElementById("btnNowMidnight").addEventListener("click", setStartToNextMidnight);
 
   document.getElementById("btnAutofill").addEventListener("click", () => {
@@ -284,7 +464,7 @@
     const active = [];
     for(let i=1;i<=MAT_COUNT;i++){
       const per = getNum(`matPerTrav${i}`);
-      const name = document.getElementById(`matName${i}`).value.trim();
+      const name = getStr(`matName${i}`);
       if(per>0 || name) active.push(i);
     }
     const n = active.length || 1;
@@ -308,7 +488,6 @@
 
   document.getElementById("btnCalc").addEventListener("click", calcPlan);
 
-  // Auto recompute
   document.addEventListener("input", (e) => {
     const id = e.target && e.target.id ? e.target.id : "";
     if(id.startsWith("mat") || id === "totalM2") computeOrder();
